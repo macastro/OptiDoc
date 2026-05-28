@@ -383,7 +383,6 @@ yarn-error.log
 .vscode
 
 # IDEs and editors
-.idea/
 .project
 .classpath
 .c9/
@@ -401,7 +400,6 @@ yarn-error.log
 
 # Miscellaneous
 /.angular/cache
-.sass-cache/
 /connect.lock
 /coverage
 /libpeerconnection.log
@@ -409,7 +407,6 @@ testem.log
 /typings
 
 # System files
-.DS_Store
 Thumbs.db
 
 .lingma
