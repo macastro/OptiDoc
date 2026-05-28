@@ -25,7 +25,7 @@ Evaluar la fricción y la pérdida de tiempo en la edición de documentos instit
 1. Recopilar una muestra representativa de documentos institucionales reales, clasificados por tipo, complejidad y perfil de usuario.
 2. Identificar los elementos de formato que causan mayor incompatibilidad entre plataformas ("la piedra en el zapato").
 3. Cuantificar el tiempo y esfuerzo que distintos perfiles de usuario dedican a corregir problemas de formato, y estimar su costo económico.
-4. Construir un índice numérico (0–100) que refleje el grado de compatibilidad de un documento dado al ser abierto en otra plataforma.
+4. Construir un índice compuesto sintético de escala 0 a 100 que refleje el grado de compatibilidad de un documento dado al ser abierto en otra plataforma.
 5. Proponer formatos o prácticas alternativas que maximicen la compatibilidad, o diseñar una capa intermedia de software que reduzca la fricción.
 6. Evaluar si los resultados justifican un caso de negocio o emprendimiento viable.
 
