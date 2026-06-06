@@ -22,6 +22,8 @@ La migración entre suites ofimáticas se ha estudiado principalmente desde la p
 
 ***Casos de migración a gran escala.*** El proyecto LibreDifesa del Ministerio de Defensa de Italia proyectó ahorros de entre 26 y 29 millones de euros migrando más de 100 000 equipos a LibreOffice, y reportó ausencia de problemas graves tras las primeras estaciones migradas. Más recientemente, el estado alemán de Schleswig-Holstein migra alrededor de 30 000 equipos desde Windows y Microsoft Office hacia Linux y LibreOffice, adoptando el Formato de Documento Abierto (ODF) como estándar oficial, con la soberanía digital como principal motivación.
 
+***Aceleradores recientes del lado europeo.*** La tendencia se ve reforzada por el anuncio de Euro-Office, suite ofimática de código abierto impulsada por un consorcio europeo (IONOS, Nextcloud, Eurostack, XWiki, OpenProject, entre otros) y prevista para su primera versión estable el 9 de junio de 2026, con integración nativa en Nextcloud Hub 26. Surgida como fork de OnlyOffice con limpieza de código, la iniciativa refleja el impulso —regulatorio y de mercado— hacia alternativas soberanas a las suites comerciales, lo que refuerza la urgencia de contar con herramientas que midan la calidad de la transición entre plataformas. En paralelo, Francia ha consolidado La Suite numérique, una plataforma de colaboración documental de código abierto impulsada por la DINUM y adoptada por la administración pública francesa como herramienta de soberanía digital (DINUM, 2024).
+
 ***La brecha en la literatura.*** Lo que estos trabajos miden y lo que omiten revela una oportunidad clara:
 
 | Lo que se estudia | Lo que falta |
@@ -35,7 +37,7 @@ En particular, la fidelidad de formato —el esfuerzo de reformateo al cambiar d
 
 ## 3. Objetivo General
 
-Desarrollar y validar una métrica de compatibilidad de formato (escala 0–100) que diagnostique de forma objetiva y reproducible la pérdida de fidelidad de un documento ofimático al abrirse o editarse en una plataforma distinta a la original, complementada con una estimación de la fricción y del tiempo de edición asociados, con el fin de identificar los elementos de formato más problemáticos y proponer prácticas o una capa de software que minimicen dichos costos.
+Desarrollar y validar una métrica de compatibilidad de formato (escala 0–100) que diagnostique de forma objetiva y reproducible la pérdida de fidelidad de un documento ofimático al abrirse o editarse en una plataforma distinta a la original, complementada con una estimación de la fricción y del tiempo de edición asociados, con el fin de identificar los elementos de formato más problemáticos y proponer prácticas y recomendaciones que minimicen dichos costos.
 
 ## 4. Objetivos Específicos
 
@@ -43,9 +45,7 @@ Desarrollar y validar una métrica de compatibilidad de formato (escala 0–100)
 2. Implementar un pipeline semiautomático que, mediante conversión entre formatos y comparación origen–destino, mida la pérdida de fidelidad de cada documento sin requerir intervención humana intensiva.
 3. Construir un índice compuesto de compatibilidad (0–100) que pondere los elementos de formato según su impacto medido.
 4. Calibrar y validar la métrica contra una medición del tiempo de edición realizada por un grupo reducido de usuarios de distintos perfiles.
-5. Identificar los elementos de formato que causan mayor incompatibilidad ("la piedra en el zapato") y el conjunto mínimo de elementos a evitar para garantizar compatibilidad.
-6. Proponer formatos o prácticas alternativas y evaluar la viabilidad de una capa intermedia de software que asigne el puntaje y sugiera correcciones.
-7. Evaluar si los resultados justifican un caso de negocio o emprendimiento viable.
+5. Identificar los elementos de formato que causan mayor incompatibilidad, proponer el conjunto mínimo de elementos a evitar y sugerir formatos o prácticas alternativas (incluida la posible adopción de ODF y de un conjunto de fuentes seguras) que minimicen la fricción en el intercambio de documentos.
 
 ## 5. Enfoque metodológico
 
@@ -59,20 +59,22 @@ El pipeline combina dos momentos:
 
 | Dimensión | Cómo se mide |
 | --- | --- |
-| Divergencia visual de maquetación | Rasterizar ambas versiones a imagen por página y calcular el índice de similitud estructural (SSIM); emplea técnicas de visión por computador. |
+| Divergencia visual de maquetación | Rasterizar ambas versiones a imagen por página y calcular el índice de similitud estructural (SSIM; Wang et al., 2004); emplea técnicas de visión por computador. |
 | Reflujo de texto | Contar líneas/párrafos cuyos saltos de línea cambian de posición. |
 | Sustitución de fuentes | Comparar las tablas de fuentes y contar las no coincidentes; permite definir un conjunto de fuentes "seguras" o comunes. |
 | Integridad de objetos | Porcentaje de objetos incrustados (imágenes, tablas, formas) preservados. |
 | Pérdida de mapeo de estilos | Comparar los estilos con nombre presentes en origen vs. destino. |
 | Diferencia de paginación | Diferencia en el número de páginas (señal rápida y burda). |
 
-Estas dimensiones se combinan en un índice ponderado de 0 a 100; los pesos se calibran con los datos de tiempo de edición de la validación humana, de modo que la severidad de cada elemento refleje su impacto real (la sustitución de una fuente es menor; una celda de tabla perdida es grave). El tiempo de edición se trata como métrica complementaria que ancla y valida la métrica automática, no como el eje central de la medición.
+Estas dimensiones se combinan en un índice ponderado de 0 a 100. Como punto de partida, los pesos se inicializan de forma uniforme —o, alternativamente, mediante un ranking *a priori* por severidad esperada (p. ej., AHP o juicio experto)— y se ajustan en la Fase 3 con los datos de tiempo de edición, de modo que la severidad de cada elemento refleje su impacto real (la sustitución de una fuente es menor; una celda de tabla perdida es grave). El tiempo de edición se trata como métrica complementaria que ancla y valida la métrica automática, no como el eje central de la medición. Para acotar el costo computacional, el SSIM se calcula sobre un conjunto acotado de páginas representativas (p. ej., primera, intermedia y última) y se documentará un umbral mínimo de SSIM a partir del cual una página se considera "compatible".
+
+***Reproducibilidad y manejo de excepciones.*** El pipeline, los scripts de conversión y los datos sintéticos generados se publicarán en un repositorio Git público para asegurar la reproducibilidad del estudio. Se documentarán y excluirán del análisis los documentos que presenten características no soportadas por el pipeline (macros VBA, contraseñas, fuentes no embebidas, entre otras), a fin de mantener la comparabilidad entre casos.
 
 Herramientas candidatas, todas de código abierto o con API disponible: python-docx y Apache POI (inventario de características), LibreOffice headless (conversión), pandoc o pandiff (diferencias estructurales) y scikit-image/OpenCV o ImageMagick (`compare -metric SSIM`) para la comparación de imágenes.
 
 ## 6. Fases del Proyecto
 
-### Fase 1 — Corpus y construcción del pipeline (~Mes 1)
+### Fase 1 — Corpus y construcción del pipeline (Semanas 1–4)
 
 **Objetivo:** reunir los insumos y dejar operativo el pipeline de medición.
 
@@ -86,7 +88,7 @@ Herramientas candidatas, todas de código abierto o con API disponible: python-d
 
 **Entregables:** corpus clasificado; pipeline funcional sobre un documento de prueba; matriz de compatibilidad preliminar.
 
-### Fase 2 — Ejecución automática y validación humana (~Mes 2)
+### Fase 2 — Ejecución automática y validación humana (Semanas 5–8)
 
 **Objetivo:** generar los datos de fidelidad a escala y los datos de calibración.
 
@@ -98,7 +100,7 @@ Herramientas candidatas, todas de código abierto o con API disponible: python-d
 
 **Entregables:** base de datos de incompatibilidades y puntajes de fidelidad por documento; tiempos de edición de la validación; encuestas breves.
 
-### Fase 3 — Calibración, análisis y propuesta (~Mes 3)
+### Fase 3 — Calibración, análisis y propuesta (Semanas 9–12)
 
 **Objetivo:** convertir los datos en la métrica calibrada, el diagnóstico y la propuesta de solución.
 
@@ -106,8 +108,7 @@ Herramientas candidatas, todas de código abierto o con API disponible: python-d
 
 - **Calibración de la métrica:** ajustar los pesos del índice contrastándolos con el tiempo de edición observado y validar la correlación entre el puntaje automático y el esfuerzo humano.
 - **Análisis cuantitativo:** ranking de los elementos de formato más problemáticos; comparación entre plataformas y, donde aplique, entre perfiles; estimación del costo económico de la fricción (horas × costo/hora por perfil).
-- **Propuesta de solución:** conjunto mínimo de elementos a evitar; formatos y prácticas recomendadas (incluida la posible adopción de ODF y de un conjunto de fuentes seguras); mitigaciones de bajo costo para la transición, como el uso de la interfaz de pestañas (Notebookbar) de LibreOffice para acercar la experiencia a la de Microsoft Office; y diseño conceptual de una capa intermedia de software que analice documentos, asigne el puntaje y sugiera correcciones.
-- **Evaluación de mercado preliminar:** determinar si el costo del problema justifica que una institución pague por una solución.
+- **Propuesta de solución:** conjunto mínimo de elementos a evitar; formatos y prácticas recomendadas (incluida la posible adopción de ODF y de un conjunto de fuentes seguras); y mitigaciones de bajo costo para la transición, como el uso de la interfaz de pestañas (Notebookbar) de LibreOffice para acercar la experiencia a la de Microsoft Office.
 
 **Entregables:** informe de resultados con diagnóstico del problema; métrica de compatibilidad documentada, calibrada y validada.
 
@@ -124,11 +125,22 @@ Herramientas candidatas, todas de código abierto o con API disponible: python-d
 
 ## 8. Alcance, supuestos y riesgos
 
-***Alcance.*** El proyecto se centra en la fidelidad de formato en el intercambio de documentos entre suites de escritorio. La dimensión de colaboración (nube vs. local) y herramientas como Google Workspace o soluciones autoalojadas tipo NextCloud/Collabora —relevantes para la estrategia de soberanía digital de ESPOL— se reconocen como contexto relacionado y posible extensión, pero quedan fuera del núcleo medible para mantener la viabilidad en el semestre.
+***Alcance.*** El proyecto se centra en la fidelidad de formato en el intercambio de documentos entre suites de escritorio. La dimensión de colaboración (nube vs. local) y herramientas como Google Workspace o soluciones autoalojadas tipo NextCloud/Collabora —relevantes para la estrategia de soberanía digital de ESPOL— se reconocen como contexto relacionado y posible extensión, pero quedan fuera del núcleo medible para mantener la viabilidad en el semestre. Iniciativas recientes como Euro-Office, prevista para integrarse de forma nativa en Nextcloud Hub 26 a partir de junio de 2026, confirman que la frontera entre escritorio y nube se está difuminando y son una motivación adicional para la métrica propuesta. La evaluación de la viabilidad comercial de la métrica y el desarrollo de una capa de software que automatice la asignación del puntaje también quedan fuera del alcance del semestre; ambos se documentan como **trabajo futuro** (ver más abajo).
+
+***Trabajo futuro.*** Con base en los resultados de este proyecto, las líneas naturales de continuación incluyen:
+
+- **Capa intermedia de software:** diseño conceptual e implementación de un módulo (CLI, librería o servicio web) que aplique el índice propuesto de forma automática, señalando los puntos de formato problemáticos y sugiriendo correcciones.
+- **Caso de negocio / emprendimiento:** evaluación de la viabilidad comercial de la métrica, considerando los costos de adopción institucional frente a los ahorros estimados por la reducción de la fricción.
+- **Extensión a entornos web y de colaboración:** adaptar la métrica para medir la fidelidad entre suites web (Google Docs, Collabora, Euro-Office dentro de Nextcloud Hub 26) y entornos autoalojados.
 
 ***Supuestos.*** Se asume la disponibilidad de una muestra mínima de documentos institucionales (complementable con documentos sintéticos) y el acceso a las herramientas de código abierto necesarias.
 
-***Riesgos y mitigaciones.*** El principal riesgo —la dependencia de coordinación humana— se mitiga al hacer del pipeline automático el núcleo del trabajo.
+***Riesgos y mitigaciones.*** Riesgos identificados y sus mitigaciones:
+
+- **Dependencia de coordinación humana** (principal). Se mitiga al hacer del pipeline automático el núcleo del trabajo y reducir la participación humana a una validación acotada.
+- **Cambios de versión de LibreOffice** que rompan la conversión en lote. Se mitigará fijando versiones específicas y versionando el pipeline en Git.
+- **Alta variabilidad del corpus**, que puede debilitar la robustez de la métrica. Se mitigará estratificando la muestra por tipo y complejidad de documento.
+- **Limitaciones del SSIM**, que puede no capturar diferencias semánticas relevantes (p. ej., párrafos reordenados con maquetación idéntica). Se mitigará complementando la métrica visual con diffs estructurales basados en pandoc.
 
 ## 9. Referencias
 
@@ -142,4 +154,10 @@ Ven, K., Van Nuffel, D., & Verelst, J. (2006). The Introduction of OpenOffice.or
 
 Observatorio Europeo de Código Abierto / Joinup. (2016). *Italian military to save 26–29 million Euro by migrating to LibreOffice* (proyecto LibreDifesa).
 
-*Nota: estas referencias fueron verificadas contra fuentes primarias o de alta credibilidad. Se recomienda revisar los textos completos antes de la redacción final del informe.*
+The Document Foundation. (2024). *Schleswig-Holstein: a state migrates to LibreOffice — progress report* [entrada de blog]. Disponible en: blog.documentfoundation.org.
+
+Saaty, T. L. (2008). Decision making with the analytic hierarchy process. *International Journal of Services Sciences, 1*(1), 83–98. (Referencia metodológica para la inicialización de pesos del índice mediante AHP.)
+
+Wang, Z., Bovik, A. C., Sheikh, H. R., & Simoncelli, E. P. (2004). Image quality assessment: from error visibility to structural similarity. *IEEE Transactions on Image Processing, 13*(4), 600–612. https://doi.org/10.1109/TIP.2003.819861
+
+DINUM — Direction interministérielle du numérique. (2024). *La Suite numérique* [plataforma de colaboración documental de código abierto del Estado francés]. Disponible en: https://lasuite.numerique.gouv.fr/ y https://github.com/suitenumerique
