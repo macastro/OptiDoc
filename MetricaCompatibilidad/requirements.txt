@@ -1,0 +1,14 @@
+# Dependencias de Python (versiones fijadas para reproducibilidad).
+# Probado con Python 3.12.
+python-docx==1.2.0
+scikit-image==0.26.0
+numpy==2.4.4
+scipy==1.17.1
+Pillow==12.1.1
+matplotlib==3.10.8
+
+# --- Dependencias de SISTEMA (no se instalan con pip) ---
+# LibreOffice 24.2.x  -> conversión headless (binario 'soffice')
+# Poppler (pdftoppm) 24.02.x -> rasterizado de PDF a PNG
+# En Debian/Ubuntu:  sudo apt-get install libreoffice poppler-utils
+# En macOS (brew):   brew install --cask libreoffice ; brew install poppler
