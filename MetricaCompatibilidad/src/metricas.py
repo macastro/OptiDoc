@@ -106,10 +106,14 @@ def guardar_figura_diferencias(
     ruta_destino: str | Path,
     ruta_salida: str | Path,
     titulo: str = "",
+    etiqueta_a: str = "Origen (.docx)",
+    etiqueta_b: str = "Destino (.odt)",
 ) -> Path:
     """
     Guarda una figura de 3 paneles: origen, destino y mapa de diferencias
     absolutas, para inspeccionar visualmente dónde se pierde fidelidad.
+    Las etiquetas de los dos primeros paneles son parametrizables (para
+    reutilizar la figura tanto en la comparación base como en la cross-engine).
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -123,8 +127,8 @@ def guardar_figura_diferencias(
     val = float(ssim(a, b, data_range=1.0))
 
     fig, ejes = plt.subplots(1, 3, figsize=(13, 6))
-    ejes[0].imshow(a, cmap="gray"); ejes[0].set_title("Origen (.docx)")
-    ejes[1].imshow(b, cmap="gray"); ejes[1].set_title("Destino (.odt)")
+    ejes[0].imshow(a, cmap="gray"); ejes[0].set_title(etiqueta_a)
+    ejes[1].imshow(b, cmap="gray"); ejes[1].set_title(etiqueta_b)
     im = ejes[2].imshow(diff, cmap="inferno", vmin=0, vmax=max(diff.max(), 1e-6))
     ejes[2].set_title(f"|Diferencia|  ·  SSIM={val:.4f}")
     for e in ejes:

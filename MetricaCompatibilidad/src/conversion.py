@@ -3,9 +3,7 @@ conversion.py — Conversión de documentos con LibreOffice en modo headless.
 
 Implementa el paso (b) del pipeline (Sección 5 del plan): convertir el documento
 de origen a otro formato (OOXML -> ODF) y renderizar a PDF para la comparación
-visual posterior. Usa un perfil de usuario aislado por llamada para evitar
-bloqueos de LibreOffice y permitir ejecución en lote reproducible (incluso en
-contenedores/CI).
+visual posterior.
 
 Probado con LibreOffice 24.2 (ver requirements.txt / protocolo experimental).
 """

@@ -16,3 +16,8 @@ venv/
 
 # Sistema
 .DS_Store
+
+# Corpus real (datos institucionales) y sus salidas — no versionar
+corpus/reunion_seguimiento/
+salidas_reunion/
+#salidas_cross/
