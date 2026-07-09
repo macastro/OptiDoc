@@ -1,11 +1,10 @@
 """
-conversion.py — Conversión de documentos con LibreOffice en modo headless.
+Convierte documentos usando LibreOffice en modo sin interfaz gráfica (headless).
 
-Implementa el paso (b) del pipeline (Sección 5 del plan): convertir el documento
-de origen a otro formato (OOXML -> ODF) y renderizar a PDF para la comparación
-visual posterior.
+Se usa para dos cosas: pasar de .docx/.doc a ODF para comparar formatos, y
+renderizar a PDF para poder comparar el aspecto visual de las páginas.
 
-Probado con LibreOffice 24.2 (ver requirements.txt / protocolo experimental).
+Probado con LibreOffice 24.2.
 """
 from __future__ import annotations
 
@@ -19,7 +18,7 @@ _BINARIOS_CANDIDATOS = ["soffice", "libreoffice", "soffice.bin"]
 
 
 def localizar_soffice() -> str:
-    """Devuelve la ruta al binario de LibreOffice o lanza RuntimeError."""
+    """Busca el binario de LibreOffice en el PATH y en rutas habituales. Lanza error si no lo encuentra."""
     for nombre in _BINARIOS_CANDIDATOS:
         ruta = shutil.which(nombre)
         if ruta:
@@ -65,8 +64,8 @@ def convertir(
         raise FileNotFoundError(f"No existe el archivo de origen: {origen}")
 
     soffice = localizar_soffice()
-    # Perfil de usuario único => evita el bloqueo "soffice ya está en ejecución"
-    # y hace la conversión segura para lotes y entornos aislados.
+    # Perfil temporal único por conversión para que varias puedan correr en paralelo
+    # sin que LibreOffice se queje de que "ya hay una instancia en ejecución".
     perfil = f"/tmp/lo_perfil_{uuid.uuid4().hex}"
 
     cmd = [

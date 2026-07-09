@@ -1,21 +1,20 @@
 """
-cross_engine.py — Comparación CROSS-ENGINE (motor de origen vs. LibreOffice).
+Compara cómo renderiza un documento Word frente a cómo lo renderiza LibreOffice.
 
-El pipeline base (src/pipeline.py) compara LibreOffice consigo mismo para AISLAR
-el mapeo de formato OOXML/.doc -> ODF. Por diseño, NO captura las diferencias
-ENTRE motores (p. ej. Microsoft Word vs. LibreOffice): saltos de línea distintos,
-reflujo, cambios de paginación, espaciado y sustitución de fuentes. Esa
-diferencia entre motores es la pregunta central de compatibilidad del proyecto.
+El pipeline principal (pipeline.py) convierte con LibreOffice y vuelve a renderizar
+con LibreOffice — esto aísla el efecto del formato, pero no captura las diferencias
+propias de cada motor: saltos de línea distintos, reflujo de texto, cambios de
+paginación o sustituciones de fuentes. Esas diferencias son exactamente lo que
+queremos medir aquí.
 
-Este módulo la mide directamente:
-    referencia = PDF exportado por la suite de ORIGEN (Word)   -- Se genera desde Word
-    objetivo   = PDF que LibreOffice produce del MISMO documento -- Lo genera el script
-    índice     = f(SSIM visual, conservación de paginación)      -- 0..100
+Cómo funciona:
+    referencia = PDF que Word exportó del documento original (hay que generarlo a mano)
+    objetivo   = PDF que LibreOffice genera del mismo documento
+    índice     = combinación de similitud visual y conservación de páginas (0-100)
 
-Por qué se requiere un PDF de Word: Microsoft Word no está disponible en 
-entorno Linux(solo hay LibreOffice), de modo que el render de referencia debe
-generarse en Word (Archivo > Exportar > PDF) y aportarse como entrada. Esto no
-es una limitación del método sino del entorno de ejecución.
+Por qué necesitamos el PDF de Word por separado: Word no corre en Linux, así
+que el render de referencia tiene que generarse en Word y pasarlo como entrada.
+No es una limitación del método, sino del entorno.
 
 Uso:
     python -m src.cross_engine --referencia word_09.pdf \
@@ -32,9 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src import conversion, metricas, puntaje, rasterizar  # noqa: E402
 
-# En cross-engine el índice usa las dos dimensiones medibles desde el render.
-# La dimensión de fuentes cross-engine requiere cotejar fuentes solicitadas
-# contra las disponibles en cada motor y se aborda por separado (protocolo §4.4).
+# Aquí solo usamos visual y paginación porque ambas se miden directamente desde el render.
+# Las fuentes cross-engine son más complejas de medir y se tratan en un módulo aparte.
 PESOS_CROSS = {"fidelidad_visual": 0.5, "conservacion_paginacion": 0.5}
 
 
@@ -46,20 +44,20 @@ def comparar(
     etiqueta_ref: str = "Word (referencia)",
     etiqueta_obj: str = "LibreOffice",
 ) -> dict:
-    """Compara el render de referencia (Word) contra el de LibreOffice."""
+    """Compara visualmente el PDF de Word con el que genera LibreOffice para el mismo documento."""
     referencia_pdf = Path(referencia_pdf)
     documento = Path(documento)
     trabajo = salida_dir / documento.stem
     trabajo.mkdir(parents=True, exist_ok=True)
 
-    # Objetivo: cómo abre LibreOffice el MISMO documento de origen.
+    # Pedimos a LibreOffice que convierta el documento original a PDF.
     objetivo_pdf = conversion.convertir(documento, "pdf", trabajo / "objetivo_libreoffice")
 
-    # Rasterizado de ambos renders al mismo DPI.
+    # Convertimos ambos PDFs a imágenes al mismo DPI para poder comparar píxeles.
     pag_ref = rasterizar.rasterizar(referencia_pdf, trabajo / "img_referencia", dpi=dpi)
     pag_obj = rasterizar.rasterizar(objetivo_pdf, trabajo / "img_objetivo", dpi=dpi)
 
-    # Métrica visual sobre páginas representativas.
+    # Calculamos la similitud visual en las páginas más representativas.
     indices = rasterizar.indices_representativos(max(len(pag_ref), len(pag_obj)))
     visual = metricas.ssim_paginas(pag_ref, pag_obj, indices)
 
@@ -69,7 +67,7 @@ def comparar(
     }
     indice = puntaje.indice_compuesto(comp, PESOS_CROSS)
 
-    # Figura de diferencias en la página más divergente.
+    # Guardamos una imagen comparativa de la página donde se ven más diferencias.
     fig_rel = None
     evaluadas = [d for d in visual["detalle"] if d["ssim"] is not None]
     if evaluadas and pag_ref and pag_obj:

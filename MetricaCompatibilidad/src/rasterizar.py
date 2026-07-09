@@ -1,8 +1,8 @@
 """
-rasterizar.py — Convierte un PDF a una imagen PNG por página (Poppler/pdftoppm).
+Convierte un PDF a imágenes PNG, una por página, usando Poppler (pdftoppm).
 
-Es el insumo para la métrica visual: se rasterizan origen y destino a la misma
-resolución para poder compararlos píxel a píxel con SSIM (Sección 5 del plan).
+Antes de comparar dos documentos visualmente, ambos se rasterizan a la misma
+resolución — así el cálculo de similitud (SSIM) puede trabajar píxel a píxel.
 """
 from __future__ import annotations
 
@@ -28,9 +28,9 @@ def rasterizar(
     prefijo: str = "pag",
 ) -> list[Path]:
     """
-    Rasteriza `pdf` a PNG (una imagen por página) en `salida_dir`.
+    Convierte cada página del PDF a una imagen PNG en la carpeta indicada.
 
-    Devuelve la lista de rutas de página ordenadas (pag-1.png, pag-2.png, ...).
+    Devuelve las rutas ordenadas de las imágenes generadas (pag-1.png, pag-2.png, ...).
     """
     pdf = Path(pdf).resolve()
     salida_dir = Path(salida_dir).resolve()
@@ -51,8 +51,9 @@ def rasterizar(
 
 def indices_representativos(n_paginas: int) -> list[int]:
     """
-    Índices (base 0) de las páginas representativas: primera, intermedia y última
-    (Sección 5: el SSIM se calcula sobre un conjunto acotado de páginas).
+    Devuelve índices (base 0) de las páginas más representativas: la primera, la
+    del medio y la última. Calcular el SSIM en todo el documento sería costoso;
+    con estas tres se obtiene una lectura equilibrada sin procesar cada hoja.
     """
     if n_paginas <= 0:
         return []

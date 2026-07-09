@@ -1,14 +1,14 @@
 """
-metricas.py — Métrica visual de fidelidad (SSIM) entre origen y destino.
+Mide qué tan parecidas se ven dos versiones de un documento comparando sus páginas
+como imágenes. Usamos el índice SSIM (similitud estructural): vale 1.0 si son
+idénticas y baja cuanto más divergen visualmente.
 
-Dimensión "Divergencia visual de maquetación" de la Sección 5: se rasterizan
-ambas versiones y se calcula el índice de similitud estructural (SSIM; Wang
-et al., 2004) por página representativa. Valor 1.0 = idénticas; menor = mayor
-divergencia. Incluye:
-  - cálculo de SSIM por página y promedio,
-  - una autoprueba que verifica que la métrica está bien implementada
-    (SSIM(x,x)=1 y SSIM(x, x desplazada) < 1),
-  - generación de una figura comparativa (origen | destino | mapa de diferencias).
+Incluye:
+  - comparación página a página y cálculo del promedio,
+  - una autoprueba para confirmar que el cálculo está bien (una imagen consigo
+    misma debe dar 1.0; con una versión desplazada debe dar menos),
+  - generación de una figura con tres paneles: original, convertido y mapa de
+    diferencias para ver exactamente dónde cambiaron las cosas.
 """
 from __future__ import annotations
 
@@ -20,8 +20,7 @@ from skimage.io import imread
 from skimage.metrics import structural_similarity as ssim
 from skimage.transform import resize
 
-# Umbral provisional a partir del cual una página se considera "compatible"
-# (se documentará/ajustará con datos; ver protocolo experimental).
+# Por encima de este valor consideramos que una página se convirtió bien. Ajustar con datos reales.
 UMBRAL_SSIM_COMPATIBLE = 0.99
 
 
@@ -31,13 +30,13 @@ def cargar_gris(ruta: str | Path) -> np.ndarray:
     if img.ndim == 3:
         img = rgb2gray(img[..., :3])
     img = img.astype(np.float64)
-    if img.max() > 1.0:  # por si viniera en [0, 255]
+    if img.max() > 1.0:  # algunas imágenes vienen en rango 0-255; las normalizamos a 0-1
         img = img / 255.0
     return img
 
 
 def ssim_par(ruta_a: str | Path, ruta_b: str | Path) -> float:
-    """SSIM entre dos imágenes. Redimensiona B a la forma de A si difieren."""
+    """Calcula el SSIM entre dos imágenes. Si tienen distinto tamaño, ajusta la segunda a la primera."""
     a = cargar_gris(ruta_a)
     b = cargar_gris(ruta_b)
     if a.shape != b.shape:
@@ -51,11 +50,12 @@ def ssim_paginas(
     indices: list[int],
 ) -> dict:
     """
-    Calcula el SSIM en las páginas representativas (alineadas por índice).
+    Calcula el SSIM para las páginas representativas y devuelve el detalle por
+    página junto con el promedio.
 
-    Devuelve un dict con el detalle por página y el promedio. Las páginas que
-    existan en un lado pero no en el otro se marcan como faltantes (señal de
-    cambio de paginación) y no entran en el promedio visual.
+    Si una página existe en el original pero no en el convertido (o viceversa),
+    la marcamos como faltante — eso indica un cambio en el número de páginas —
+    y no la incluimos en el promedio visual.
     """
     detalle = []
     valores = []
@@ -85,10 +85,10 @@ def ssim_paginas(
 
 def autoprueba_ssim(ruta_imagen: str | Path) -> dict:
     """
-    Verifica que la métrica está bien implementada y es sensible:
-      - SSIM(x, x) debe ser 1.0
-      - SSIM(x, x desplazada 5 px) debe ser < 1.0
-    Devuelve los valores; sirve como test de cordura del pipeline.
+    Comprueba que el cálculo de SSIM funciona correctamente:
+      - Una imagen comparada consigo misma debe dar 1.0.
+      - La misma imagen desplazada 5 píxeles debe dar un valor menor.
+    Útil para confirmar que el entorno está bien configurado antes de procesar documentos.
     """
     x = cargar_gris(ruta_imagen)
     igual = float(ssim(x, x, data_range=1.0))
@@ -110,10 +110,9 @@ def guardar_figura_diferencias(
     etiqueta_b: str = "Destino (.odt)",
 ) -> Path:
     """
-    Guarda una figura de 3 paneles: origen, destino y mapa de diferencias
-    absolutas, para inspeccionar visualmente dónde se pierde fidelidad.
-    Las etiquetas de los dos primeros paneles son parametrizables (para
-    reutilizar la figura tanto en la comparación base como en la cross-engine).
+    Genera una imagen con tres paneles: el original, el convertido y un mapa de calor
+    que muestra dónde difieren. Sirve para ver de un vistazo dónde se perdió fidelidad.
+    Las etiquetas son configurables para reutilizar la función en comparaciones cross-engine.
     """
     import matplotlib
     matplotlib.use("Agg")

@@ -1,21 +1,15 @@
 """
-puntaje.py — Índice compuesto provisional de compatibilidad (0-100).
+Calcula un índice de compatibilidad entre 0 y 100 combinando tres aspectos:
 
-Combina las dimensiones medibles en este Hito en un índice 0-100 (Sección 5).
-Para el Hito 1 se usan tres componentes computables de extremo a extremo:
+  1. Fidelidad visual:       qué tan parecida se ve la página tras la conversión (SSIM).
+  2. Conservación de páginas: si el número de páginas cambió.
+  3. Conservación de fuentes: qué fracción de las fuentes del original llegaron al destino.
+                              Las sustituciones "seguras" (mismas métricas de letra) cuentan
+                              con crédito parcial — aunque el render se vea igual, la fuente
+                              pedida no existe en destino y eso importa si alguien edita después.
 
-  1. Fidelidad visual         : derivada del SSIM (mapeo de maquetación OOXML->ODF).
-  2. Conservación de paginación: penaliza diferencias en el número de páginas.
-  3. Conservación de fuentes   : fracción de fuentes de origen presentes en destino,
-                                 con crédito PARCIAL cuando hubo una sustitución
-                                 segura (métricamente compatible). Que el render se
-                                 vea idéntico (SSIM=1.0) no implica que la fuente
-                                 pedida exista en destino: la sustitución se registra
-                                 porque importa para portabilidad y edición posterior.
-
-Los PESOS son provisionales y uniformes (1/3 cada uno), tal como prescribe el
-plan: se inicializan uniformes y se CALIBRAN en la Fase 3 contra el tiempo de
-edición observado. Las funciones aceptan parámetros para experimentar.
+Los tres pesos son iguales por ahora (1/3 cada uno) y pueden ajustarse cuando
+haya datos reales de cuánto trabajo genera cada tipo de diferencia.
 """
 from __future__ import annotations
 
@@ -25,7 +19,7 @@ PESOS_POR_DEFECTO = {
     "conservacion_fuentes": 1 / 3,
 }
 
-# Crédito (0-1) cuando una fuente no está en destino pero sí su sustituta segura.
+# Puntuación parcial cuando la fuente exacta no llegó pero sí un equivalente seguro.
 CREDITO_SUSTITUCION_SEGURA = 0.7
 
 
@@ -34,12 +28,12 @@ def _clamp(x: float, lo: float = 0.0, hi: float = 100.0) -> float:
 
 
 def componente_visual(ssim_promedio: float) -> float:
-    """SSIM (idealmente en [0,1]) -> [0,100]."""
+    """Convierte el valor SSIM (0-1) a una escala de 0 a 100."""
     return round(_clamp(ssim_promedio * 100.0), 1)
 
 
 def componente_paginacion(paginas_origen: int, paginas_destino: int) -> float:
-    """100 si coincide el número de páginas; decae con la diferencia relativa."""
+    """Da 100 si el número de páginas es igual; baja proporcionalmente si hay diferencia."""
     if paginas_origen <= 0:
         return 0.0
     if paginas_origen == paginas_destino:
@@ -55,14 +49,14 @@ def componente_fuentes(
     credito_sub: float = CREDITO_SUSTITUCION_SEGURA,
 ) -> dict:
     """
-    Conservación de fuentes con crédito por sustitución segura.
+    Calcula qué porcentaje de las fuentes del original llegaron al documento convertido.
 
-    Para cada fuente de origen:
-      - presente exacta en destino           -> 1.0
-      - ausente pero su sustituta segura está -> credito_sub (p. ej. 0.7)
-      - ausente sin equivalente               -> 0.0
+    Para cada fuente:
+      - Si está tal cual en el destino: puntuación completa.
+      - Si no está pero sí un equivalente seguro: puntuación parcial (credito_sub).
+      - Si no hay nada parecido: cero.
 
-    Devuelve el puntaje [0,100] y el desglose por categoría.
+    Devuelve la puntuación y un desglose de qué pasó con cada fuente.
     """
     sustituciones = sustituciones or {}
     if not fuentes_origen:
@@ -88,7 +82,7 @@ def componente_fuentes(
 
 
 def indice_compuesto(componentes: dict, pesos: dict | None = None) -> float:
-    """Media ponderada de los componentes -> índice 0-100."""
+    """Combina los componentes en un solo número de 0 a 100 usando la media ponderada."""
     pesos = pesos or PESOS_POR_DEFECTO
     total_peso = sum(pesos.get(k, 0.0) for k in componentes)
     if total_peso == 0:
@@ -106,7 +100,7 @@ def calcular(
     sustituciones: dict | None = None,
     pesos: dict | None = None,
 ) -> dict:
-    """Calcula los componentes y el índice compuesto; devuelve el desglose."""
+    """Calcula todos los componentes y los combina en el índice final con su desglose."""
     fuentes_info = componente_fuentes(fuentes_origen, fuentes_destino, sustituciones)
     comp = {
         "fidelidad_visual": componente_visual(ssim_promedio),

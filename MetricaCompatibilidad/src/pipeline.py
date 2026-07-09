@@ -1,20 +1,19 @@
 """
-pipeline.py — Orquestador del pipeline básico de compatibilidad (Hito 1).
+Orquesta el análisis completo de compatibilidad para uno o varios documentos.
 
-Para cada documento de entrada (.docx OOXML o .doc binario heredado):
-  1. Inventario de características (predicción previa).
-  2. Conversión a ODF (documento -> odt).
-  3. Render de origen (documento -> pdf) y destino (odt -> pdf) con LibreOffice.
-  4. Rasterizado de ambos a PNG por página.
-  5. Métrica visual SSIM sobre páginas representativas.
-  6. Índice de compatibilidad provisional (0-100).
-  7. Figura de diferencias de la página más divergente + reporte JSON.
+Cada documento pasa por estos pasos:
+  1. Inventario previo     — ¿cuán complejo es antes de convertir?
+  2. Conversión a ODF      — .doc/.docx -> .odt.
+  3. Renderizado a PDF     — tanto del original como del convertido.
+  4. Rasterizado a PNG     — una imagen por página en cada PDF.
+  5. Similitud visual      — SSIM en páginas representativas.
+  6. Índice 0-100          — compatibilidad global.
+  7. Figura + reporte JSON — comparativa de la página con mayor divergencia.
 
-Formato heredado .doc: python-docx solo lee OOXML, de modo que para archivos
-.doc binarios el INVENTARIO se calcula sobre una copia normalizada a .docx
-(hecha con LibreOffice), mientras que la MEDICIÓN DE FIDELIDAD se realiza sobre
-el archivo .doc ORIGINAL. Esta distinción se registra explícitamente en el
-reporte para no confundir lo medido.
+Nota sobre archivos .doc: python-docx solo entiende OOXML, así que cuando el
+documento es un .doc binario antiguo generamos una copia normalizada a .docx
+solo para el inventario. La medición de fidelidad se hace siempre sobre el
+original, y el reporte lo indica claramente.
 
 Uso:
     python -m src.pipeline --corpus corpus/sinteticos --salida salidas
@@ -36,7 +35,7 @@ from src import conversion, inventario, metricas, puntaje, rasterizar  # noqa: E
 
 
 def _es_legacy_doc(ruta: Path) -> bool:
-    """True si la entrada es un .doc binario (Word 97-2003), no OOXML."""
+    """Devuelve True si el archivo es un .doc binario antiguo (Word 97-2003), no un .docx moderno."""
     return ruta.suffix.lower() == ".doc"
 
 
@@ -48,10 +47,10 @@ def procesar_documento(ruta_entrada: Path, salida_dir: Path, dpi: int = 150) -> 
 
     legacy = _es_legacy_doc(ruta_entrada)
 
-    # 1) Predicción previa (inventario).
-    #    python-docx solo lee OOXML. Si la entrada es .doc binario, se normaliza
-    #    una copia a .docx SOLO para poder inventariar sus características; la
-    #    medición de fidelidad (pasos 2-6) usa el archivo ORIGINAL.
+    # 1) Inventario de características del documento.
+    #    python-docx no entiende el .doc antiguo, así que para esos archivos
+    #    creamos una copia temporal en .docx solo para el inventario.
+    #    La medición de fidelidad usa siempre el archivo original.
     if legacy:
         docx_inv = conversion.convertir(ruta_entrada, "docx", trabajo / "normalizado")
         inv = inventario.inventariar(docx_inv)
@@ -66,29 +65,26 @@ def procesar_documento(ruta_entrada: Path, salida_dir: Path, dpi: int = 150) -> 
         inv["formato_original"] = ".docx (OOXML)"
         ruta_fuentes_decl = ruta_entrada
 
-    # 2) Conversión de formato -> ODF (sobre el archivo ORIGINAL)
+    # 2) Convertimos a ODF partiendo siempre del archivo original.
     odt = conversion.convertir(ruta_entrada, "odt", trabajo / "conversion")
 
-    # 3) Render origen y destino (carpetas separadas: mismo basename)
+    # 3) Renderizamos a PDF tanto el original como el convertido.
     pdf_origen = conversion.convertir(ruta_entrada, "pdf", trabajo / "render_origen")
     pdf_destino = conversion.convertir(odt, "pdf", trabajo / "render_destino")
 
-    # 4) Rasterizado
+    # 4) Convertimos cada PDF en imágenes PNG para poder comparar píxeles.
     pag_origen = rasterizar.rasterizar(pdf_origen, trabajo / "img_origen", dpi=dpi)
     pag_destino = rasterizar.rasterizar(pdf_destino, trabajo / "img_destino", dpi=dpi)
 
-    # 5) Métrica visual
+    # 5) Calculamos cuán parecidas se ven las páginas (SSIM).
     indices = rasterizar.indices_representativos(max(len(pag_origen), len(pag_destino)))
     visual = metricas.ssim_paginas(pag_origen, pag_destino, indices)
 
-    # Dimensión de fuentes. El PUNTAJE se basa en las fuentes EFECTIVAMENTE
-    # USADAS por los runs (señal limpia), no en las declaradas (que incluyen
-    # defaults de la suite no elegidos por el autor). Se conserva el mapa de
-    # sustituciones seguras para dar crédito a reemplazos métricamente compatibles.
+    # Usamos las fuentes que el autor eligió realmente, no las que Word declara por defecto.
     f_origen = set(inv.get("fuentes_usadas", []))
     f_destino = inventario.fuentes_odt(odt)
 
-    # 6) Índice compuesto provisional
+    # 6) Calculamos el índice de compatibilidad.
     score = puntaje.calcular(
         ssim_promedio=visual["ssim_promedio"],
         paginas_origen=len(pag_origen),
@@ -98,7 +94,7 @@ def procesar_documento(ruta_entrada: Path, salida_dir: Path, dpi: int = 150) -> 
         sustituciones=inventario.SUSTITUCIONES_SEGURAS,
     )
 
-    # 7) Figura de diferencias: página representativa con menor SSIM
+    # 7) Guardamos una imagen comparativa de la página con más diferencias.
     fig_rel = None
     evaluadas = [d for d in visual["detalle"] if d["ssim"] is not None]
     if evaluadas and pag_origen and pag_destino:
@@ -168,7 +164,7 @@ def main() -> None:
     if args.doc:
         docs = [args.doc]
     else:
-        # Acepta OOXML (.docx) y formato heredado binario (.doc).
+        # Buscamos tanto .docx modernos como los viejos .doc binarios.
         docs = sorted(
             set(args.corpus.glob("*.docx")) | set(args.corpus.glob("*.doc"))
         )
@@ -181,7 +177,7 @@ def main() -> None:
         print(f"[procesando] {d.name} ...")
         reportes.append(procesar_documento(d, args.salida, dpi=args.dpi))
 
-    # Resumen CSV global
+    # Exportamos un CSV con el resumen de todos los documentos procesados.
     with open(args.salida / "resumen.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
         w.writerow(["documento", "formato_original", "complejidad", "esfuerzo_previsto",
