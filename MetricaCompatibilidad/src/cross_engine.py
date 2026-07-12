@@ -23,6 +23,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import sys
 from pathlib import Path
@@ -97,24 +98,85 @@ def comparar(
     return reporte
 
 
+def _emparejar(corpus: Path, referencias: Path | None):
+    """Empareja cada original (.docx/.doc) con su PDF de Word por nombre base.
+
+    El PDF de referencia se busca con el mismo nombre y extensión .pdf, en la
+    carpeta de referencias si se indica, o en la misma carpeta del corpus.
+    Devuelve (pares_emparejados, originales_sin_referencia).
+    """
+    ref_dir = referencias or corpus
+    originales = sorted(set(corpus.glob("*.docx")) | set(corpus.glob("*.doc")))
+    pares, sin_ref = [], []
+    for doc in originales:
+        ref = ref_dir / (doc.stem + ".pdf")
+        if ref.exists():
+            pares.append((doc, ref))
+        else:
+            sin_ref.append(doc)
+    return pares, sin_ref
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Comparación cross-engine (Word vs LibreOffice).")
-    ap.add_argument("--referencia", type=Path, required=True,
-                    help="PDF de referencia exportado desde Word.")
-    ap.add_argument("--documento", type=Path, required=True,
-                    help="Documento original (.docx/.doc) que abrirá LibreOffice.")
+    g = ap.add_mutually_exclusive_group(required=True)
+    g.add_argument("--corpus", type=Path,
+                   help="Carpeta con los originales (.docx/.doc) y sus PDF de Word "
+                        "(mismo nombre, extensión .pdf). Procesa todos por lote.")
+    g.add_argument("--documento", type=Path,
+                   help="Un documento original individual (usar junto con --referencia).")
+    ap.add_argument("--referencia", type=Path,
+                    help="PDF de Word para el modo individual (--documento).")
+    ap.add_argument("--referencias", type=Path,
+                    help="Carpeta con los PDF de Word, si están separados de los "
+                         "originales (modo --corpus).")
     ap.add_argument("--salida", type=Path, default=Path("salidas_cross"))
     ap.add_argument("--dpi", type=int, default=150)
     args = ap.parse_args()
 
-    r = comparar(args.referencia, args.documento, args.salida, dpi=args.dpi)
-    print(json.dumps({
-        "documento": r["documento"],
-        "paginas": r["paginas"],
-        "ssim_promedio": r["metrica_visual"]["ssim_promedio"],
-        "componentes": r["componentes"],
-        "indice_cross_engine": r["indice_compatibilidad_cross_engine"],
-    }, ensure_ascii=False, indent=2))
+    if args.documento:
+        if not args.referencia:
+            ap.error("--documento requiere --referencia (el PDF exportado desde Word).")
+        pares = [(args.documento, args.referencia)]
+    else:
+        pares, sin_ref = _emparejar(args.corpus, args.referencias)
+        for d in sin_ref:
+            print(f"[aviso] se omite '{d.name}': falta su PDF de Word "
+                  f"(se esperaba '{d.stem}.pdf')", file=sys.stderr)
+        if not pares:
+            ap.error("Ningún documento se emparejó con su PDF de Word. Verifica que "
+                     "cada original tenga un .pdf con el mismo nombre base.")
+
+    args.salida.mkdir(parents=True, exist_ok=True)
+    reportes = []
+    for doc, ref in pares:
+        print(f"[cross-engine] {doc.name}  vs  {ref.name} ...")
+        reportes.append(comparar(ref, doc, args.salida, dpi=args.dpi))
+
+    # Resumen CSV consolidado
+    with open(args.salida / "resumen_cross_engine.csv", "w", newline="", encoding="utf-8") as fh:
+        w = csv.writer(fh)
+        w.writerow(["documento", "paginas_word", "paginas_libreoffice", "ssim_promedio",
+                    "fidelidad_visual", "conservacion_paginacion", "indice_cross_engine"])
+        for r in reportes:
+            pg = list(r["paginas"].values())
+            w.writerow([r["documento"], pg[0], pg[1],
+                        r["metrica_visual"]["ssim_promedio"],
+                        r["componentes"]["fidelidad_visual"],
+                        r["componentes"]["conservacion_paginacion"],
+                        r["indice_compatibilidad_cross_engine"]])
+
+    # Tabla en consola
+    print("\n" + "=" * 80)
+    print(f"{'Documento':<40}{'SSIM':<10}{'Págs(W/LO)':<12}{'Índice 0-100':>14}")
+    print("-" * 80)
+    for r in reportes:
+        pg = list(r["paginas"].values())
+        doc = r["documento"] if len(r["documento"]) <= 39 else r["documento"][:36] + "..."
+        print(f"{doc:<40}{r['metrica_visual']['ssim_promedio']:<10}"
+              f"{f'{pg[0]}/{pg[1]}':<12}{r['indice_compatibilidad_cross_engine']:>14}")
+    print("=" * 80)
+    print(f"\nResultados en: {args.salida.resolve()}  ·  consolidado: resumen_cross_engine.csv")
 
 
 if __name__ == "__main__":

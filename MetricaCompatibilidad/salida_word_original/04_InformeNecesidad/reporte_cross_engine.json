@@ -1,0 +1,40 @@
+{
+  "documento": "04_InformeNecesidad.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 3,
+    "LibreOffice": 3
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.9734,
+    "paginas_evaluadas": 3,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.9606,
+        "compatible": false
+      },
+      {
+        "pagina": 2,
+        "ssim": 0.9636,
+        "compatible": false
+      },
+      {
+        "pagina": 3,
+        "ssim": 0.9961,
+        "compatible": true
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 97.3,
+    "conservacion_paginacion": 100.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 98.7,
+  "figura_diferencias": "04_InformeNecesidad\\cross_diferencias_pag1.png"
+}

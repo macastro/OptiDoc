@@ -1,0 +1,30 @@
+{
+  "documento": "06_ActaEntregaRecepcion.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 1,
+    "LibreOffice": 1
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.9714,
+    "paginas_evaluadas": 1,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.9714,
+        "compatible": false
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 97.1,
+    "conservacion_paginacion": 100.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 98.5,
+  "figura_diferencias": "06_ActaEntregaRecepcion\\cross_diferencias_pag1.png"
+}

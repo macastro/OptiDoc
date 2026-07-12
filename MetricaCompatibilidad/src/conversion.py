@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import tempfile
 import uuid
 from pathlib import Path
 
@@ -37,25 +38,12 @@ def localizar_soffice() -> str:
 
 
 def convertir(
-    origen: str | Path,
-    formato: str,
-    salida_dir: str | Path,
-    timeout: int = 180,
+        origen: str | Path,
+        formato: str,
+        salida_dir: str | Path,
+        timeout: int = 180,
 ) -> Path:
-    """
-    Convierte `origen` al `formato` indicado y deja el resultado en `salida_dir`.
-
-    Parámetros
-    ----------
-    origen : ruta al archivo de entrada (.docx, .odt, ...).
-    formato : extensión destino para `--convert-to` (p. ej. 'odt', 'pdf').
-    salida_dir : carpeta donde LibreOffice escribirá el archivo convertido.
-    timeout : segundos máximos antes de abortar la conversión.
-
-    Devuelve
-    --------
-    Path al archivo convertido.
-    """
+    """... docstring ..."""
     origen = Path(origen).resolve()
     salida_dir = Path(salida_dir).resolve()
     salida_dir.mkdir(parents=True, exist_ok=True)
@@ -64,9 +52,11 @@ def convertir(
         raise FileNotFoundError(f"No existe el archivo de origen: {origen}")
 
     soffice = localizar_soffice()
-    # Perfil temporal único por conversión para que varias puedan correr en paralelo
-    # sin que LibreOffice se queje de que "ya hay una instancia en ejecución".
-    perfil = f"/tmp/lo_perfil_{uuid.uuid4().hex}"
+
+    # SOLUCIÓN: Crear una ruta temporal compatible con Windows/Linux
+    # y convertirla correctamente a un formato de URI (file://...)
+    perfil_path = Path(tempfile.gettempdir()) / f"lo_perfil_{uuid.uuid4().hex}"
+    perfil_uri = perfil_path.as_uri()
 
     cmd = [
         soffice,
@@ -75,7 +65,7 @@ def convertir(
         formato,
         "--outdir",
         str(salida_dir),
-        f"-env:UserInstallation=file://{perfil}",
+        f"-env:UserInstallation={perfil_uri}",
         str(origen),
     ]
 
