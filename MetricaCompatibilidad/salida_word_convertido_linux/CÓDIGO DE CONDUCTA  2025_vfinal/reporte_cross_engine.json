@@ -1,0 +1,41 @@
+{
+  "documento": "CÓDIGO DE CONDUCTA  2025_vfinal.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 11,
+    "LibreOffice": 12
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.8256,
+    "paginas_evaluadas": 2,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.8388,
+        "compatible": false
+      },
+      {
+        "pagina": 7,
+        "ssim": 0.8124,
+        "compatible": false
+      },
+      {
+        "pagina": 12,
+        "ssim": null,
+        "compatible": false,
+        "nota": "página faltante (cambio de paginación)"
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 82.6,
+    "conservacion_paginacion": 90.9
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 86.8,
+  "figura_diferencias": "CÓDIGO DE CONDUCTA  2025_vfinal/cross_diferencias_pag7.png"
+}

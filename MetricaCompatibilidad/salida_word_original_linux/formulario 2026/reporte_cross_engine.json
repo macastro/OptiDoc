@@ -1,0 +1,40 @@
+{
+  "documento": "formulario 2026.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 4,
+    "LibreOffice": 4
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.9461,
+    "paginas_evaluadas": 3,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.9349,
+        "compatible": false
+      },
+      {
+        "pagina": 3,
+        "ssim": 0.928,
+        "compatible": false
+      },
+      {
+        "pagina": 4,
+        "ssim": 0.9755,
+        "compatible": false
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 94.6,
+    "conservacion_paginacion": 100.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 97.3,
+  "figura_diferencias": "formulario 2026/cross_diferencias_pag3.png"
+}

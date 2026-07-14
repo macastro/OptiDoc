@@ -1,0 +1,40 @@
+{
+  "documento": "ACTA DE ENTREGA RECEPCIÓN.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 3,
+    "LibreOffice": 3
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.8382,
+    "paginas_evaluadas": 3,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.8353,
+        "compatible": false
+      },
+      {
+        "pagina": 2,
+        "ssim": 0.7896,
+        "compatible": false
+      },
+      {
+        "pagina": 3,
+        "ssim": 0.8897,
+        "compatible": false
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 83.8,
+    "conservacion_paginacion": 100.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 91.9,
+  "figura_diferencias": "ACTA DE ENTREGA RECEPCIÓN/cross_diferencias_pag2.png"
+}

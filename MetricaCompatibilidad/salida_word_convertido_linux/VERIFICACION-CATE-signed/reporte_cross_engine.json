@@ -1,0 +1,41 @@
+{
+  "documento": "VERIFICACION-CATE-signed.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 2,
+    "LibreOffice": 3
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.7488,
+    "paginas_evaluadas": 2,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.6346,
+        "compatible": false
+      },
+      {
+        "pagina": 2,
+        "ssim": 0.8629,
+        "compatible": false
+      },
+      {
+        "pagina": 3,
+        "ssim": null,
+        "compatible": false,
+        "nota": "página faltante (cambio de paginación)"
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 74.9,
+    "conservacion_paginacion": 50.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 62.5,
+  "figura_diferencias": "VERIFICACION-CATE-signed/cross_diferencias_pag1.png"
+}

@@ -1,0 +1,9 @@
+documento,paginas_word,paginas_libreoffice,ssim_promedio,fidelidad_visual,conservacion_paginacion,indice_cross_engine
+02_MemorandoInterno.docx,1,1,0.971,97.1,100.0,98.5
+03_ActaReunionComite.docx,1,1,0.8006,80.1,100.0,90.0
+04_InformeNecesidad.docx,3,3,0.9686,96.9,100.0,98.5
+05_SolicitudCompraSIC.docx,1,1,0.8544,85.4,100.0,92.7
+06_ActaEntregaRecepcion.docx,1,1,0.7451,74.5,100.0,87.2
+07_FormularioESPOLDivulga.docx,2,2,0.8106,81.1,100.0,90.5
+08_DelegacionRepresentanteTecnico.docx,1,2,0.7465,74.7,0.0,37.4
+formulario 2026.docx,4,4,0.9461,94.6,100.0,97.3

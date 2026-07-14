@@ -1,0 +1,40 @@
+{
+  "documento": "NTE INEN-ISO 2859-1_EXTRACTO.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 12,
+    "LibreOffice": 12
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.9684,
+    "paginas_evaluadas": 3,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.9482,
+        "compatible": false
+      },
+      {
+        "pagina": 7,
+        "ssim": 0.9751,
+        "compatible": false
+      },
+      {
+        "pagina": 12,
+        "ssim": 0.982,
+        "compatible": false
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 96.8,
+    "conservacion_paginacion": 100.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 98.4,
+  "figura_diferencias": "NTE INEN-ISO 2859-1_EXTRACTO/cross_diferencias_pag1.png"
+}

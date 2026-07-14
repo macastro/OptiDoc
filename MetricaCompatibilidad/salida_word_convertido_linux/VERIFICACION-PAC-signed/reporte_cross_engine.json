@@ -1,0 +1,42 @@
+{
+  "documento": "VERIFICACION-PAC-signed.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 2,
+    "LibreOffice": 4
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.6287,
+    "paginas_evaluadas": 1,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.6287,
+        "compatible": false
+      },
+      {
+        "pagina": 3,
+        "ssim": null,
+        "compatible": false,
+        "nota": "página faltante (cambio de paginación)"
+      },
+      {
+        "pagina": 4,
+        "ssim": null,
+        "compatible": false,
+        "nota": "página faltante (cambio de paginación)"
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 62.9,
+    "conservacion_paginacion": 0.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 31.4,
+  "figura_diferencias": "VERIFICACION-PAC-signed/cross_diferencias_pag1.png"
+}

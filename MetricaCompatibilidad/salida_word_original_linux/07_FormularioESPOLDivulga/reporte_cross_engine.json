@@ -1,0 +1,35 @@
+{
+  "documento": "07_FormularioESPOLDivulga.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 2,
+    "LibreOffice": 2
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.8106,
+    "paginas_evaluadas": 2,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.7391,
+        "compatible": false
+      },
+      {
+        "pagina": 2,
+        "ssim": 0.8822,
+        "compatible": false
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 81.1,
+    "conservacion_paginacion": 100.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 90.5,
+  "figura_diferencias": "07_FormularioESPOLDivulga/cross_diferencias_pag1.png"
+}

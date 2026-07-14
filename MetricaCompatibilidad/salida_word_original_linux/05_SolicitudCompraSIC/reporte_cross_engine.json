@@ -1,0 +1,30 @@
+{
+  "documento": "05_SolicitudCompraSIC.docx",
+  "tipo_comparacion": "cross-engine (Word vs LibreOffice)",
+  "paginas": {
+    "Word (referencia)": 1,
+    "LibreOffice": 1
+  },
+  "metrica_visual": {
+    "ssim_promedio": 0.8544,
+    "paginas_evaluadas": 1,
+    "umbral_compatible": 0.99,
+    "detalle": [
+      {
+        "pagina": 1,
+        "ssim": 0.8544,
+        "compatible": false
+      }
+    ]
+  },
+  "componentes": {
+    "fidelidad_visual": 85.4,
+    "conservacion_paginacion": 100.0
+  },
+  "pesos": {
+    "fidelidad_visual": 0.5,
+    "conservacion_paginacion": 0.5
+  },
+  "indice_compatibilidad_cross_engine": 92.7,
+  "figura_diferencias": "05_SolicitudCompraSIC/cross_diferencias_pag1.png"
+}
