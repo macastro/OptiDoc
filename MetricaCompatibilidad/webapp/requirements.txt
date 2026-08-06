@@ -1,0 +1,16 @@
+# Dependencias del medidor de compatibilidad (app web)
+# El cálculo solo necesita las cuatro primeras. LibreOffice y Poppler NO se
+# instalan con pip: son paquetes de sistema (ver README_DESPLIEGUE.md).
+
+Flask>=3.0
+pymupdf>=1.24
+numpy>=1.24
+pillow>=10.0
+
+# Solo en Windows: permite generar el PDF de Word automáticamente (así el
+# usuario sube únicamente el documento). Se ignora en Linux/macOS.
+pywin32>=306; platform_system == "Windows"
+
+# Opcional: genera la figura de diferencias (izquierda/centro/derecha).
+# Puede omitirse en entornos con poca memoria; la app funciona sin ella.
+matplotlib>=3.7

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Medidor de compatibilidad de documentos{% endblock %}</title>
+  <style>
+    :root{
+      --tinta:#14293F; --papel:#F7F6F2; --panel:#FFFFFF;
+      --instrumento:#0E7C86; --instrumento-suave:#E4EFEF; --instrumento-borde:#BFD9DA;
+      --tenue:#5A6B7A; --linea:#DDDAD2;
+      --alta:#1F8A4C; --aceptable:#C08A22; --baja:#C0442E; --critica:#9E2414;
+      --mono:ui-monospace,"SFMono-Regular","JetBrains Mono",Menlo,Consolas,monospace;
+      --sans:system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0}
+    body{
+      background:var(--papel); color:var(--tinta); font-family:var(--sans);
+      line-height:1.55; -webkit-font-smoothing:antialiased;
+      background-image:linear-gradient(var(--linea) 1px,transparent 1px),
+                       linear-gradient(90deg,var(--linea) 1px,transparent 1px);
+      background-size:26px 26px; background-position:-1px -1px;
+    }
+    .marco{max-width:960px; margin:0 auto; padding:0 22px}
+
+    /* Cabecera */
+    .cabecera{border-bottom:1.5px solid var(--tinta); background:rgba(247,246,242,.86);
+      backdrop-filter:blur(4px); position:sticky; top:0; z-index:5}
+    .cabecera__int{display:flex; align-items:center; gap:14px; padding:16px 0}
+    .glifo{width:34px; height:34px; flex:none}
+    .marca__eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--instrumento); margin:0}
+    .marca__nombre{font-size:17px; font-weight:650; margin:0; letter-spacing:-.01em}
+    .cabecera__meta{margin-left:auto; font-family:var(--mono); font-size:11px;
+      color:var(--tenue); text-align:right; letter-spacing:.04em}
+
+    main{padding:38px 0 60px}
+
+    /* Tipografía de secciones */
+    .eyebrow{font-family:var(--mono); font-size:12px; letter-spacing:.2em;
+      text-transform:uppercase; color:var(--instrumento); margin:0 0 10px}
+    h1.titulo{font-size:30px; line-height:1.12; letter-spacing:-.02em; margin:0 0 12px; font-weight:680}
+    .plomo{font-size:16px; color:var(--tenue); margin:0 0 26px; max-width:60ch}
+
+    /* Panel / tarjeta */
+    .panel{background:var(--panel); border:1.5px solid var(--tinta);
+      box-shadow:6px 6px 0 rgba(20,41,63,.08)}
+    .panel__cuerpo{padding:26px}
+
+    /* Etiquetas de campo */
+    .campo{margin-bottom:20px}
+    .campo__label{display:block; font-weight:640; margin-bottom:4px}
+    .campo__pista{font-size:13.5px; color:var(--tenue); margin:0 0 10px}
+    .req{color:var(--baja); font-family:var(--mono); font-size:12px}
+    .opt{color:var(--tenue); font-family:var(--mono); font-size:11px;
+      letter-spacing:.08em; text-transform:uppercase}
+
+    /* Zona de archivo */
+    .suelta{position:relative; border:1.5px dashed var(--instrumento-borde);
+      background:var(--instrumento-suave); border-radius:2px; padding:20px 18px;
+      display:flex; align-items:center; gap:14px; cursor:pointer; transition:border-color .15s,background .15s}
+    .suelta:hover,.suelta:focus-within{border-color:var(--instrumento); background:#DAEAEA}
+    .suelta input[type=file]{position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%}
+    .suelta__icono{width:30px; height:30px; flex:none; color:var(--instrumento)}
+    .suelta__txt{font-size:14px}
+    .suelta__txt b{font-weight:640}
+    .suelta__nombre{font-family:var(--mono); font-size:13px; color:var(--instrumento);
+      margin-top:3px; word-break:break-all}
+
+    /* Botón */
+    .boton{appearance:none; border:1.5px solid var(--tinta); background:var(--tinta);
+      color:#fff; font-family:var(--sans); font-size:15px; font-weight:640;
+      padding:13px 26px; cursor:pointer; transition:transform .06s, box-shadow .12s;
+      box-shadow:4px 4px 0 rgba(20,41,63,.18)}
+    .boton:hover{transform:translate(-1px,-1px); box-shadow:6px 6px 0 rgba(20,41,63,.22)}
+    .boton:active{transform:translate(2px,2px); box-shadow:1px 1px 0 rgba(20,41,63,.2)}
+    .boton--fantasma{background:transparent; color:var(--tinta); box-shadow:none}
+    .boton--fantasma:hover{background:var(--instrumento-suave)}
+
+    /* Avisos */
+    .aviso{border-left:4px solid var(--instrumento); background:var(--instrumento-suave);
+      padding:13px 16px; font-size:14px; margin:0 0 22px}
+    .aviso--error{border-color:var(--baja); background:#FBEAE6}
+    .aviso b{font-weight:650}
+
+    .nota{font-size:12.5px; color:var(--tenue); font-family:var(--mono); letter-spacing:.02em}
+
+    a{color:var(--instrumento)}
+    footer{border-top:1px solid var(--linea); margin-top:40px}
+    .pie{padding:20px 0; font-size:12.5px; color:var(--tenue);
+      display:flex; gap:16px; flex-wrap:wrap; font-family:var(--mono); letter-spacing:.03em}
+
+    @media (max-width:560px){
+      h1.titulo{font-size:24px}
+      .panel__cuerpo{padding:18px}
+      .cabecera__meta{display:none}
+    }
+    {% block estilo_extra %}{% endblock %}
+  </style>
+</head>
+<body>
+  <header class="cabecera">
+    <div class="marco cabecera__int">
+      <svg class="glifo" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <rect x="1" y="1" width="38" height="38" rx="2" stroke="#14293F" stroke-width="1.5"/>
+        <path d="M7 27a13 13 0 0 1 26 0" stroke="#0E7C86" stroke-width="2.4" fill="none"/>
+        <line x1="20" y1="27" x2="28.5" y2="18.5" stroke="#14293F" stroke-width="2.4" stroke-linecap="round"/>
+        <circle cx="20" cy="27" r="2.4" fill="#14293F"/>
+      </svg>
+      <div>
+        <p class="marca__eyebrow">Métrica de compatibilidad</p>
+        <p class="marca__nombre">Medidor Word ↔ LibreOffice</p>
+      </div>
+      <div class="cabecera__meta">        
+        {% if caps.word and caps.libreoffice %}motores: Word + LibreOffice
+        {% elif caps.libreoffice %}motor: LibreOffice activo
+        {% else %}modo: comparación de PDF{% endif %}
+      </div>
+    </div>
+  </header>
+  <main class="marco">
+    {% block contenido %}{% endblock %}
+  </main>
+  <footer>
+    <div class="marco pie">
+      <span>Índice 0–100 · 5 dimensiones ponderadas</span>
+      <span>Umbral de compatibilidad: 90</span>
+      <span>Comparación cross-engine</span>
+    </div>
+  </footer>
+  {% block script %}{% endblock %}
+</body>
+</html>
