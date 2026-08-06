@@ -68,7 +68,12 @@ def localizar_soffice() -> str | None:
             return ruta
     for ruta in ("/usr/bin/soffice", "/opt/libreoffice/program/soffice",
                  "/Applications/LibreOffice.app/Contents/MacOS/soffice",
+                 # En Windows se prefiere soffice.com (consola que espera a que
+                 # termine y devuelve la salida); soffice.exe puede desconectarse
+                 # antes de escribir el PDF.
+                 r"C:\Program Files\LibreOffice\program\soffice.com",
                  r"C:\Program Files\LibreOffice\program\soffice.exe",
+                 r"C:\Program Files (x86)\LibreOffice\program\soffice.com",
                  r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"):
         if Path(ruta).exists():
             return ruta
@@ -117,13 +122,18 @@ def convertir(documento: Path, formato: str, salida_dir: Path, timeout: int = 18
         raise RuntimeError("LibreOffice no está disponible en este entorno.")
     documento, salida_dir = Path(documento), Path(salida_dir)
     salida_dir.mkdir(parents=True, exist_ok=True)
-    perfil = f"file://{tempfile.gettempdir()}/lo_perfil_{uuid.uuid4().hex}"
-    cmd = [soffice, "--headless", f"-env:UserInstallation={perfil}",
+    # Perfil de usuario aislado (permite convertir aunque LibreOffice esté abierto).
+    # Se pasa como URL de archivo VÁLIDA en cada sistema: Path.as_uri() genera
+    # file:///C:/... en Windows y file:///tmp/... en Linux. Construir la URL a mano
+    # rompía el arranque en Windows -> error "bootstrap.ini está dañado".
+    perfil_dir = Path(tempfile.gettempdir()) / f"lo_perfil_{uuid.uuid4().hex}"
+    cmd = [soffice, "--headless", f"-env:UserInstallation={perfil_dir.as_uri()}",
            "--convert-to", formato, "--outdir", str(salida_dir), str(documento)]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     destino = salida_dir / (documento.stem + "." + formato.split(":")[0])
     if not destino.exists():
-        raise RuntimeError(f"LibreOffice no generó '{formato}'. {proc.stderr[:300]}")
+        detalle = (proc.stderr or proc.stdout or "").strip()[:300]
+        raise RuntimeError(f"LibreOffice no generó '{formato}'. {detalle}")
     return destino
 
 
