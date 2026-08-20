@@ -46,6 +46,7 @@ def _guardar(archivo, carpeta: Path) -> Path | None:
     """Guarda un archivo subido con nombre seguro. Devuelve None si está vacío."""
     if not archivo or not archivo.filename:
         return None
+    carpeta.mkdir(parents=True, exist_ok=True)
     nombre = secure_filename(archivo.filename) or "archivo"
     destino = carpeta / nombre
     archivo.save(destino)
@@ -88,11 +89,46 @@ def _construir_resultado(datos: dict, doc_nombre: str) -> dict:
 
 @app.route("/")
 def inicio():
-    return render_template("index.html", caps=CAPS, version=motor.VERSION_METRICAS)
+    return render_template("index.html", caps=CAPS, tab="uno",
+                           version=motor.VERSION_METRICAS)
+
+
+def _evaluar_documento(doc: Path, work: Path, pdf_word: Path | None = None,
+                       pdf_lo: Path | None = None) -> dict:
+    """Evalúa un documento y devuelve los datos de la métrica (o lanza RuntimeError).
+
+    Genera el objetivo con LibreOffice y la referencia con Word cuando están
+    disponibles; si no, usa los PDF que se le pasen. Sin referencia de Word cae
+    al diagnóstico de mapeo a ODF.
+    """
+    obj_pdf = None
+    if CAPS["libreoffice"]:
+        obj_pdf = motor.convertir(doc, "pdf", work / "obj")
+    elif pdf_lo and _es_pdf(pdf_lo):
+        obj_pdf = pdf_lo
+
+    ref_pdf = None
+    if CAPS["word"]:
+        ref_pdf = motor.convertir_con_word(doc, work / "ref")
+    elif pdf_word and _es_pdf(pdf_word):
+        ref_pdf = pdf_word
+
+    if ref_pdf and obj_pdf:
+        return motor.metricas_cross(ref_pdf, obj_pdf)
+    if obj_pdf and not ref_pdf:
+        if CAPS["libreoffice"]:
+            odt = motor.convertir(doc, "odt", work / "odt")
+            odt_pdf = motor.convertir(odt, "pdf", work / "odtpdf")
+            return motor.metricas_mapeo(obj_pdf, odt_pdf)
+        raise RuntimeError("Falta la referencia de Word (sube también su PDF exportado desde Word).")
+    if ref_pdf and not obj_pdf:
+        raise RuntimeError("Falta la versión de LibreOffice (instala LibreOffice o sube su PDF).")
+    raise RuntimeError("Este servidor no puede convertir el documento; sube los PDF ya generados.")
 
 
 @app.route("/analizar", methods=["POST"])
 def analizar():
+    """Modo de un documento."""
     with tempfile.TemporaryDirectory() as tmp:
         carpeta = Path(tmp)
         try:
@@ -107,7 +143,7 @@ def analizar():
                 datos = motor.metricas_cross(pdf_word, pdf_lo)
                 return _ok(datos, pdf_word.stem)
 
-            # --- Ruta B: documento de Word ---
+            # --- Ruta B: documento ---
             if doc:
                 if _es_pdf(doc):
                     return _error("Subiste un PDF en la casilla del documento. "
@@ -115,44 +151,8 @@ def analizar():
                 if doc.suffix.lower() not in EXT_DOC:
                     return _error(f"Formato no admitido: {doc.suffix}. "
                                   "Usa .docx, .doc, .odt o .rtf.")
-
-                # Objetivo = cómo abre LibreOffice el documento.
-                obj_pdf = None
-                if CAPS["libreoffice"]:
-                    obj_pdf = motor.convertir(doc, "pdf", carpeta / "obj")
-                elif pdf_lo and _es_pdf(pdf_lo):
-                    obj_pdf = pdf_lo
-
-                # Referencia = cómo se ve en Word. Si hay Word, se genera solo.
-                ref_pdf = None
-                if CAPS["word"]:
-                    ref_pdf = motor.convertir_con_word(doc, carpeta / "ref")
-                elif pdf_word and _es_pdf(pdf_word):
-                    ref_pdf = pdf_word
-
-                # Caso ideal: tenemos ambas versiones -> métrica cross-engine real.
-                if ref_pdf and obj_pdf:
-                    datos = motor.metricas_cross(ref_pdf, obj_pdf)
-                    return _ok(datos, doc.name)
-
-                # Hay objetivo (LibreOffice) pero no referencia (no Word ni su PDF).
-                if obj_pdf and not ref_pdf:
-                    if CAPS["libreoffice"]:
-                        odt = motor.convertir(doc, "odt", carpeta / "odt")
-                        odt_pdf = motor.convertir(odt, "pdf", carpeta / "odtpdf")
-                        datos = motor.metricas_mapeo(obj_pdf, odt_pdf)
-                        return _ok(datos, doc.name)
-                    return _error("Falta la referencia de Word. Sube también el PDF "
-                                  "exportado desde Word.")
-
-                # Hay referencia (Word) pero no objetivo (sin LibreOffice ni su PDF).
-                if ref_pdf and not obj_pdf:
-                    return _error("Este equipo generó la versión de Word, pero falta la de "
-                                  "LibreOffice. Instala LibreOffice o sube el PDF exportado "
-                                  "desde LibreOffice.")
-
-                return _error("Este servidor no puede convertir el documento. Sube el PDF "
-                              "de Word y el PDF de LibreOffice ya generados.")
+                datos = _evaluar_documento(doc, carpeta, pdf_word=pdf_word, pdf_lo=pdf_lo)
+                return _ok(datos, doc.name)
 
             return _error("No subiste ningún archivo. Elige un documento (o dos PDF).")
 
@@ -164,15 +164,99 @@ def analizar():
                           "dañado ni protegido con contraseña e inténtalo de nuevo.")
 
 
+@app.route("/analizar-lote", methods=["POST"])
+def analizar_lote():
+    """Modo de varios documentos: evalúa cada uno y muestra una tabla."""
+    with tempfile.TemporaryDirectory() as tmp:
+        carpeta = Path(tmp)
+        documentos = [f for f in request.files.getlist("documentos") if f and f.filename]
+
+        # PDF de Word opcionales, emparejados por nombre (para servidores sin Word).
+        pdfs_word: dict[str, Path] = {}
+        for f in request.files.getlist("pdfs_word"):
+            if f and f.filename and f.filename.lower().endswith(".pdf"):
+                p = _guardar(f, carpeta / "wpdf")
+                if p:
+                    pdfs_word[p.stem.lower()] = p
+
+        if not documentos:
+            return _error_lote("No subiste ningún documento. Elige uno o varios archivos.")
+
+        resultados, errores = [], []
+        for i, archivo in enumerate(documentos):
+            work = carpeta / f"item_{i}"
+            work.mkdir(parents=True, exist_ok=True)
+            doc = _guardar(archivo, work)
+            if not doc:
+                errores.append({"documento": archivo.filename, "motivo": "archivo vacío"})
+                continue
+            if _es_pdf(doc) or doc.suffix.lower() not in EXT_DOC:
+                errores.append({"documento": doc.name,
+                                "motivo": f"formato no admitido ({doc.suffix})"})
+                continue
+            try:
+                emparejado = pdfs_word.get(doc.stem.lower())
+                datos = _evaluar_documento(doc, work, pdf_word=emparejado)
+                resultados.append(_resumen_doc(datos, doc.name))
+            except RuntimeError as exc:
+                errores.append({"documento": doc.name, "motivo": _mensaje_error(str(exc))})
+            except Exception:                                   # noqa: BLE001
+                traceback.print_exc()
+                errores.append({"documento": doc.name, "motivo": "error inesperado al procesar"})
+
+        resultados.sort(key=lambda r: r["indice"])              # peor primero
+        return render_template("resultado_lote.html", resultados=resultados,
+                               errores=errores, caps=CAPS,
+                               resumen=_estadisticas_lote(resultados))
+
+
+def _resumen_doc(datos: dict, nombre: str) -> dict:
+    """Resumen compacto de un documento para la tabla de lote."""
+    corto = {"fidelidad_visual": "Visual", "conservacion_paginacion": "Paginación",
+             "conservacion_fuentes": "Fuentes", "estabilidad_flujo": "Flujo",
+             "integridad_objetos": "Objetos"}
+    comp = datos["componentes"]
+    dims = [{"titulo": t, "corto": corto.get(k, t), "valor": comp[k],
+             "peso": int(motor.PESOS[k] * 100)}
+            for k, t, _ in DIMENSIONES if k in comp]
+    pag = datos["paginas"]
+    fuentes = datos.get("fuentes") or {}
+    return {
+        "documento": nombre,
+        "indice": datos["indice"],
+        "clasificacion": datos["clasificacion"],
+        "problematico": datos["problematico"],
+        "modo": datos["modo"],
+        "ssim": datos.get("ssim_promedio"),
+        "paginas": pag,
+        "delta_paginas": pag["objetivo"] - pag["referencia"],
+        "dimensiones": dims,
+        "sustituciones": (fuentes.get("sustituidas_arbitrarias") or [])
+                         + (fuentes.get("sustituidas_seguras") or []),
+    }
+
+
+def _estadisticas_lote(res: list) -> dict:
+    if not res:
+        return {"n": 0}
+    idx = [r["indice"] for r in res]
+    return {"n": len(res), "media": round(sum(idx) / len(idx), 1),
+            "min": min(idx), "max": max(idx),
+            "problematicos": sum(1 for r in res if r["problematico"]),
+            "paginacion_rota": sum(1 for r in res if r["delta_paginas"] != 0)}
+
+
 def _mensaje_error(texto: str) -> str:
     bajo = texto.lower()
-    if "libreoffice no generó" in bajo or "convert" in bajo:
+    if "bootstrap.ini" in bajo or "no generó" in bajo or "libreoffice no" in bajo:
         return ("LibreOffice no pudo abrir el documento. Puede estar dañado, protegido "
                 "o en un formato inesperado.")
     if "password" in bajo or "encrypt" in bajo:
-        return "El documento está protegido con contraseña; quita la protección y reintenta."
+        return "El documento está protegido con contraseña; quítala y reintenta."
     if "pymupdf" in bajo:
         return "Falta la librería de lectura de PDF (pymupdf) en el servidor."
+    if texto.startswith("Falta") or texto.startswith("Este servidor"):
+        return texto
     return "No se pudo procesar el archivo: " + texto[:160]
 
 
@@ -181,9 +265,13 @@ def _ok(datos: dict, nombre: str):
                            r=_construir_resultado(datos, nombre), caps=CAPS)
 
 
-def _error(mensaje: str):
-    return render_template("index.html", caps=CAPS, error=mensaje,
+def _error(mensaje: str, tab: str = "uno"):
+    return render_template("index.html", caps=CAPS, error=mensaje, tab=tab,
                            version=motor.VERSION_METRICAS), 400
+
+
+def _error_lote(mensaje: str):
+    return _error(mensaje, tab="varios")
 
 
 # Alias WSGI para Passenger / gunicorn.

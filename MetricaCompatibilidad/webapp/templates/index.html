@@ -1,47 +1,49 @@
 {% extends "base.html" %}
-{% block titulo %}Medir compatibilidad de un documento{% endblock %}
+{% block titulo %}Medir compatibilidad de documentos{% endblock %}
 
 {% block contenido %}
 <p class="eyebrow">Diagnóstico de fidelidad de formato</p>
 <h1 class="titulo">¿Se verá igual tu documento<br>en Word y en LibreOffice?</h1>
 <p class="plomo">
-  Sube tu documento y obtén un índice de compatibilidad de 0 a 100, con el desglose
-  de las cinco dimensiones que miden dónde y cuánto cambia el formato al pasar de una
-  suite a la otra.
+  Obtén un índice de compatibilidad de 0 a 100, con el desglose de las cinco dimensiones
+  que miden dónde y cuánto cambia el formato al pasar de una suite a la otra.
 </p>
 
 {% if error %}
 <div class="aviso aviso--error"><b>No se pudo calcular.</b> {{ error }}</div>
 {% endif %}
 
-<form class="panel" action="{{ url_for('analizar') }}" method="post"
-      enctype="multipart/form-data" id="formulario">
+<div class="tabs" role="tablist">
+  <button type="button" class="tab {% if tab != 'varios' %}tab--activa{% endif %}" data-panel="uno">Un documento</button>
+  <button type="button" class="tab {% if tab == 'varios' %}tab--activa{% endif %}" data-panel="varios">Varios documentos</button>
+</div>
+
+<!-- ============ PANEL: UN DOCUMENTO ============ -->
+<div class="panel-tab" id="panel-uno" {% if tab == 'varios' %}hidden{% endif %}>
+<form class="panel" action="{{ url_for('analizar') }}" method="post" enctype="multipart/form-data">
   <div class="panel__cuerpo">
 
     {% if caps.solo_documento %}
-    {# ---- Windows con Word + LibreOffice: basta el documento ---- #}
     <div class="aviso">
-      Este equipo tiene <b>Word y LibreOffice</b>. Sube solo el documento editable: el servidor
-      genera automáticamente la versión PDF de Word y la de LibreOffice, y las comparará.
+      Este equipo tiene <b>Word y LibreOffice</b>. Sube solo el documento: el servidor
+      genera automáticamente la versión de Word y la de LibreOffice, y las compara.
     </div>
     <div class="campo">
       <label class="campo__label" for="documento">
         Documento de Word <span class="req">obligatorio</span>
       </label>
-      <p class="campo__pista">Formatos: .docx, .doc, .odt o .rtf.</p>
+      <p class="campo__pista">Formatos: .docx, .doc, .odt o .rtf. No necesitas exportar
+        ningún PDF a mano: se generan solos.</p>
       <label class="suelta">
         <svg class="suelta__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="1.6"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-        <span class="suelta__txt">
-          <b>Elige el documento</b> o arrástralo aquí
-          <span class="suelta__nombre" data-para="documento"></span>
-        </span>
+        <span class="suelta__txt"><b>Elige el documento</b> o arrástralo aquí
+          <span class="suelta__nombre" data-para="documento"></span></span>
         <input type="file" name="documento" id="documento" accept=".docx,.doc,.odt,.rtf">
       </label>
     </div>
 
     {% elif caps.libreoffice %}
-    {# ---- Solo LibreOffice: documento + PDF de Word (recomendado) ---- #}
     <div class="campo">
       <label class="campo__label" for="documento">
         Documento de Word <span class="req">obligatorio</span>
@@ -51,37 +53,31 @@
       <label class="suelta">
         <svg class="suelta__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="1.6"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
-        <span class="suelta__txt">
-          <b>Elige el documento</b> o arrástralo aquí
-          <span class="suelta__nombre" data-para="documento"></span>
-        </span>
+        <span class="suelta__txt"><b>Elige el documento</b> o arrástralo aquí
+          <span class="suelta__nombre" data-para="documento"></span></span>
         <input type="file" name="documento" id="documento" accept=".docx,.doc,.odt,.rtf">
       </label>
     </div>
-
     <div class="campo">
       <label class="campo__label" for="pdf_word">
         PDF exportado desde Word <span class="opt">recomendado</span>
       </label>
       <p class="campo__pista">En Word: Archivo → Exportar → Crear PDF. Es la referencia de
-        cómo se ve el documento en Word. <b>Sin este PDF solo se mide el mapeo a ODF</b>,
-        no la comparación real entre Word y LibreOffice.</p>
+        cómo se ve en Word. <b>Sin este PDF solo se mide el mapeo a ODF</b>, no la
+        comparación real entre Word y LibreOffice.</p>
       <label class="suelta">
         <svg class="suelta__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
              stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-        <span class="suelta__txt">
-          <b>Elige el PDF de Word</b> (opcional pero recomendado)
-          <span class="suelta__nombre" data-para="pdf_word"></span>
-        </span>
+        <span class="suelta__txt"><b>Elige el PDF de Word</b> (opcional pero recomendado)
+          <span class="suelta__nombre" data-para="pdf_word"></span></span>
         <input type="file" name="pdf_word" id="pdf_word" accept="application/pdf,.pdf">
       </label>
     </div>
 
     {% else %}
-    {# ---- Modo sin LibreOffice (hosting compartido): dos PDF ---- #}
     <div class="aviso">
       Este servidor no convierte documentos, así que compara <b>dos PDF que tú generas</b>:
-      uno exportado desde Word y otro exportado desde LibreOffice, del mismo documento.
+      uno exportado desde Word y otro desde LibreOffice, del mismo documento.
     </div>
     <div class="campo">
       <label class="campo__label" for="pdf_word">
@@ -111,34 +107,99 @@
     </div>
     {% endif %}
 
-    <button class="boton" type="submit" id="enviar">Calcular compatibilidad</button>
-    <p class="nota" style="margin-top:14px" id="cargando" hidden>
-      Procesando… esto puede tardar unos segundos.</p>
+    <button class="boton" type="submit">Calcular compatibilidad</button>
   </div>
 </form>
+</div>
+
+<!-- ============ PANEL: VARIOS DOCUMENTOS ============ -->
+<div class="panel-tab" id="panel-varios" {% if tab != 'varios' %}hidden{% endif %}>
+<form class="panel" action="{{ url_for('analizar_lote') }}" method="post" enctype="multipart/form-data">
+  <div class="panel__cuerpo">
+
+    {% if caps.libreoffice or caps.word %}
+    {% if caps.solo_documento %}
+    <div class="aviso">
+      Tienes <b>Word y LibreOffice</b>: selecciona varios documentos y se calcula la
+      métrica de cada uno automáticamente.
+    </div>
+    {% endif %}
+    <div class="campo">
+      <label class="campo__label" for="documentos">
+        Documentos <span class="req">obligatorio</span>
+      </label>
+      <p class="campo__pista">Puedes seleccionar <b>varios archivos a la vez</b>
+        (.docx, .doc, .odt, .rtf).{% if not caps.word %} Opcionalmente añade abajo sus PDF
+        de Word, con el mismo nombre, para la comparación real.{% endif %}</p>
+      <label class="suelta">
+        <svg class="suelta__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.6"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+        <span class="suelta__txt"><b>Elige los documentos</b> o arrástralos aquí
+          <span class="suelta__nombre" data-para="documentos"></span></span>
+        <input type="file" name="documentos" id="documentos" multiple accept=".docx,.doc,.odt,.rtf">
+      </label>
+    </div>
+
+    {% if not caps.word %}
+    <div class="campo">
+      <label class="campo__label" for="pdfs_word">
+        PDF de Word <span class="opt">opcional</span>
+      </label>
+      <p class="campo__pista">Cada PDF se empareja con su documento por el nombre de archivo
+        (p. ej. <code>acta.docx</code> ↔ <code>acta.pdf</code>). Sin ellos se mide el
+        mapeo a ODF de cada documento.</p>
+      <label class="suelta">
+        <svg class="suelta__icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        <span class="suelta__txt"><b>Elige los PDF de Word</b> (opcional)
+          <span class="suelta__nombre" data-para="pdfs_word"></span></span>
+        <input type="file" name="pdfs_word" id="pdfs_word" multiple accept="application/pdf,.pdf">
+      </label>
+    </div>
+    {% endif %}
+
+    <button class="boton" type="submit">Calcular todos</button>
+
+    {% else %}
+    <div class="aviso">
+      El modo de varios documentos necesita <b>LibreOffice en el servidor</b> para convertir
+      cada archivo. En este servidor, que solo compara PDF, usa el modo <b>Un documento</b>
+      subiendo los dos PDF.
+    </div>
+    {% endif %}
+  </div>
+</form>
+</div>
 
 <p class="nota" style="margin-top:24px">
   Se miden cinco dimensiones: fidelidad visual (30%), conservación de paginación (25%),
   conservación de fuentes (20%), estabilidad del flujo de texto (15%) e integridad de
-  objetos (10%).
+  objetos (10%). Los archivos se procesan al vuelo y no se conservan.
 </p>
 {% endblock %}
 
 {% block script %}
 <script>
-  // Muestra el nombre del archivo elegido bajo cada zona.
+  // Nombre(s) de archivo elegido(s) bajo cada zona.
   document.querySelectorAll('input[type=file]').forEach(function(inp){
     inp.addEventListener('change', function(){
-      var destino = document.querySelector('.suelta__nombre[data-para="'+inp.id+'"]');
-      if(destino) destino.textContent = inp.files.length ? '✓ ' + inp.files[0].name : '';
+      var destino = document.querySelector('.suelta__nombre[data-para="' + inp.id + '"]');
+      if(!destino) return;
+      if(!inp.files.length){ destino.textContent = ''; return; }
+      destino.textContent = inp.files.length === 1
+        ? '✓ ' + inp.files[0].name
+        : '✓ ' + inp.files.length + ' archivos seleccionados';
     });
   });
-  // Estado de envío.
-  var form = document.getElementById('formulario');
-  if(form) form.addEventListener('submit', function(){
-    document.getElementById('enviar').disabled = true;
-    document.getElementById('enviar').textContent = 'Calculando…';
-    var c = document.getElementById('cargando'); if(c) c.hidden = false;
+  // Cambio entre modos (tabs).
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('tab--activa'); });
+      t.classList.add('tab--activa');
+      var panel = t.getAttribute('data-panel');
+      document.getElementById('panel-uno').hidden = (panel !== 'uno');
+      document.getElementById('panel-varios').hidden = (panel !== 'varios');
+    });
   });
 </script>
 {% endblock %}
